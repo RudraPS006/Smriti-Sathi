@@ -18,13 +18,14 @@ const ChatMessage = require('../../src/models/ChatMessage');
 const JournalEntry = require('../../src/models/JournalEntry');
 const FamilyMember = require('../../src/models/FamilyMember');
 const ActivityLog = require('../../src/models/ActivityLog');
+const Photo = require('../../src/models/Photo');
 const fs = require('fs');
 const path = require('path');
 
 const PASSWORD = 'test-password-123';
 
 async function wipe() {
-  await Promise.all([GameSession.deleteMany({}), Memory.deleteMany({}), ChatMessage.deleteMany({}), JournalEntry.deleteMany({}), FamilyMember.deleteMany({}), ActivityLog.deleteMany({})]);
+  await Promise.all([GameSession.deleteMany({}), Memory.deleteMany({}), ChatMessage.deleteMany({}), JournalEntry.deleteMany({}), FamilyMember.deleteMany({}), ActivityLog.deleteMany({}), Photo.deleteMany({})]);
   await prisma.alert.deleteMany();
   await prisma.reminder.deleteMany();
   await prisma.careLink.deleteMany();
@@ -379,6 +380,24 @@ describe('family members (Mongoose CRUD + file import)', () => {
     const eve = (await carer.agent.get(`/api/v1/family/${pid}`)).body.members.find((m) => m.name === 'Eve');
     expect(eve.photoUrl).toBe(''); // outside image URLs are dropped
     expect((await carer.agent.post(`/api/v1/family/${pid}/import`)).status).toBe(400);
+  });
+
+  test('photos are stored in MongoDB and only the care team can view them', async () => {
+    const pid = patient.user.id;
+    // 1×1 transparent PNG
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
+    const r = await carer.agent.post(`/api/v1/family/${pid}`).field('name', 'Photo Person').field('relation', 'cousin').attach('photo', png, { filename: 'p.png', contentType: 'image/png' });
+    expect(r.status).toBe(201);
+    const url = r.body.member.photoUrl;
+    expect(url).toMatch(/^\/api\/v1\/photos\/[0-9a-f]{24}$/);
+    const img = await carer.agent.get(url);
+    expect(img.status).toBe(200);
+    expect(img.headers['content-type']).toBe('image/png');
+    expect((await patient.agent.get(url)).status).toBe(200);
+    expect((await stranger.agent.get(url)).status).toBe(404);
+    expect((await carer.agent.post(`/api/v1/family/${pid}`).field('name', 'Bad File').field('relation', 'x').attach('photo', Buffer.from('hello'), { filename: 'a.txt', contentType: 'text/plain' })).status).toBe(415);
+    await carer.agent.delete(`/api/v1/family/${pid}/${r.body.member._id}`);
+    expect((await carer.agent.get(url)).status).toBe(404); // deleted with its family member
   });
 
   test('template download; family feeds the Family faces game', async () => {

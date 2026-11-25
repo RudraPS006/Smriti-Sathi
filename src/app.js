@@ -39,7 +39,12 @@ app.use(
 app.use(express.json({ limit: '100kb' })); // parses JSON bodies (replaces body-parser)
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser()); // fills req.cookies
+// Sessions are kept in MongoDB, so a game in progress survives a server restart
+// (Render's free servers sleep when idle). Tests use the default in-memory store.
+const { MongoStore } = require('connect-mongo');
+const sessionStore = config.isTest ? undefined : MongoStore.create({ mongoUrl: config.mongoUri, collectionName: 'sessions', ttl: 2 * 60 * 60 });
 const sessionMiddleware = session({
+  store: sessionStore,
   name: 'smriti.sid',
   secret: config.sessionSecret,
   resave: false,

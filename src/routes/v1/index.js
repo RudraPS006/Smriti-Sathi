@@ -9,6 +9,7 @@ router.use('/patients', require('./patients'));
 router.use('/games', require('./games'));
 router.use('/memories', require('./memories'));
 router.use('/family', require('./family'));
+router.use('/photos', require('./photos'));
 router.use('/reminders', require('./reminders'));
 router.use('/alerts', require('./alerts'));
 router.use('/reports', require('./reports'));

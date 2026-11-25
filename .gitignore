@@ -5,3 +5,4 @@ logs/*.gz
 public/uploads/*
 !public/uploads/.gitkeep
 coverage/
+.env.remote

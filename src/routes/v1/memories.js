@@ -1,9 +1,5 @@
 // Unit IV — full CRUD on a Mongoose model, with pagination and file upload.
 const express = require('express');
-const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
-const multer = require('multer');
 const { body, param } = require('express-validator');
 const Memory = require('../../models/Memory');
 const bus = require('../../events/bus');
@@ -13,20 +9,7 @@ const { requireAuth, requireRole, requirePatientAccess } = require('../../middle
 const { searchMemories } = require('../../services/aiService');
 const { paginate, pageResult } = require('./helpers');
 const { record } = require('../../services/activityService');
-
-const UPLOAD_DIR = path.join(__dirname, '..', '..', '..', 'public', 'uploads');
-
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOAD_DIR,
-    filename: (req, file, cb) => cb(null, crypto.randomUUID() + path.extname(file.originalname).toLowerCase()),
-  }),
-  limits: { fileSize: 3 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const ok = ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype);
-    cb(ok ? null : new HttpError(415, 'Only JPG, PNG or WEBP photos are allowed'), ok);
-  },
-});
+const { photoUpload, savePhoto, removePhoto } = require('../../services/photoService');
 
 const router = express.Router({ mergeParams: true });
 router.use(requireAuth);
@@ -45,9 +28,6 @@ function safeJson(s, fallback) {
   try { return JSON.parse(s); } catch { return fallback; }
 }
 
-function removePhoto(url) {
-  if (url && url.startsWith('/uploads/')) fs.unlink(path.join(UPLOAD_DIR, path.basename(url)), () => {});
-}
 
 // LIST (paginated)  GET /api/v1/memories/:patientId?page=1&limit=6
 router.get('/:patientId', requirePatientAccess(), async (req, res) => {
@@ -76,11 +56,11 @@ router.post('/:patientId/:id/viewed', requirePatientAccess(), requireRole('patie
 });
 
 // CREATE (caregivers add memories; the patient may too)
-router.post('/:patientId', requirePatientAccess(), requireRole('caregiver', 'patient', 'admin'), upload.single('photo'), memoryRules, validate, async (req, res) => {
+router.post('/:patientId', requirePatientAccess(), requireRole('caregiver', 'patient', 'admin'), photoUpload.single('photo'), memoryRules, validate, async (req, res) => {
   const memory = await Memory.create({
     ...pick(req.body),
     patientId: req.patientId,
-    photoUrl: req.file ? `/uploads/${req.file.filename}` : '',
+    photoUrl: req.file ? await savePhoto(req.file, req.patientId, req.user.id) : '',
     createdBy: req.user.id,
   });
   bus.emit(bus.EVENTS.MEMORY_ADDED, memory);
@@ -88,13 +68,13 @@ router.post('/:patientId', requirePatientAccess(), requireRole('caregiver', 'pat
 });
 
 // UPDATE
-router.put('/:patientId/:id', requirePatientAccess(), requireRole('caregiver', 'patient', 'admin'), param('id').isMongoId(), upload.single('photo'), memoryRules, validate, async (req, res) => {
+router.put('/:patientId/:id', requirePatientAccess(), requireRole('caregiver', 'patient', 'admin'), param('id').isMongoId(), photoUpload.single('photo'), memoryRules, validate, async (req, res) => {
   const memory = await Memory.findOne({ _id: req.params.id, patientId: req.patientId });
   if (!memory) throw new HttpError(404, 'Memory not found');
   Object.assign(memory, pick(req.body));
   if (req.file) {
-    removePhoto(memory.photoUrl);
-    memory.photoUrl = `/uploads/${req.file.filename}`;
+    await removePhoto(memory.photoUrl);
+    memory.photoUrl = await savePhoto(req.file, req.patientId, req.user.id);
   }
   memory.embedding = undefined; // text changed -> recompute
   await memory.save();
@@ -106,7 +86,7 @@ router.put('/:patientId/:id', requirePatientAccess(), requireRole('caregiver', '
 router.delete('/:patientId/:id', requirePatientAccess(), requireRole('caregiver', 'admin'), param('id').isMongoId(), validate, async (req, res) => {
   const memory = await Memory.findOneAndDelete({ _id: req.params.id, patientId: req.patientId });
   if (!memory) throw new HttpError(404, 'Memory not found');
-  removePhoto(memory.photoUrl);
+  await removePhoto(memory.photoUrl);
   res.status(204).end();
 });
 

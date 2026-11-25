@@ -1,12 +1,18 @@
 # Unit VI — deploy to Render (third-party hosting) straight from the GitHub repo.
+# Render → New → Blueprint → pick this repository. It creates:
+#   * smriti-sathi     the main Node.js app (Express + Socket.IO)
+#   * smriti-i18n      the language microservice (core http module)
+#   * smriti-postgres  a free PostgreSQL database
 # MongoDB is not offered by Render: create a free cluster on MongoDB Atlas and
-# paste its connection string into MONGO_URI in the Render dashboard.
+# paste its connection string when Render asks for MONGO_URI.
 services:
   - type: web
     name: smriti-sathi
     runtime: node
     plan: free
-    buildCommand: npm ci && npx prisma generate && npx prisma db push --skip-generate
+    region: singapore          # closest Render region to North East India
+    # --include=dev: the Prisma CLI is a dev dependency and is needed at build time
+    buildCommand: npm ci --include=dev && npx prisma generate && npx prisma db push --skip-generate
     startCommand: npm start
     healthCheckPath: /api/v1/health
     envVars:
@@ -19,23 +25,24 @@ services:
           name: smriti-postgres
           property: connectionString
       - key: MONGO_URI
-        sync: false            # set in dashboard (MongoDB Atlas)
+        sync: false            # asked for during setup (MongoDB Atlas connection string)
       - key: JWT_SECRET
         generateValue: true
       - key: SESSION_SECRET
         generateValue: true
       - key: OPENAI_API_KEY
         sync: false            # optional; leave empty for mock mode
+      # Public address of the language microservice. If Render had to rename the
+      # service, update this in the dashboard — until then the app quietly uses
+      # its own copy of the translation files, so nothing breaks.
       - key: I18N_SERVICE_URL
-        fromService:
-          type: web
-          name: smriti-i18n
-          property: hostport   # private network address; the app adds http://
+        value: https://smriti-i18n.onrender.com
 
   - type: web
     name: smriti-i18n
     runtime: node
     plan: free
+    region: singapore
     buildCommand: npm ci --omit=dev
     startCommand: node i18n-service/server.js
     healthCheckPath: /health
@@ -43,3 +50,6 @@ services:
 databases:
   - name: smriti-postgres
     plan: free
+    region: singapore
+    databaseName: smriti_sathi
+    user: smriti

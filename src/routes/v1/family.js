@@ -2,8 +2,6 @@
 // Unit IV (Mongoose CRUD), Unit II (express-validator), Unit I (fs + JSON + parsing a file buffer)
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
 const multer = require('multer');
 const { body, param } = require('express-validator');
 const FamilyMember = require('../../models/FamilyMember');
@@ -11,21 +9,10 @@ const validate = require('../../middleware/validate');
 const HttpError = require('../../middleware/httpError');
 const { requireAuth, requireRole, requirePatientAccess } = require('../../middleware/auth');
 const { record } = require('../../services/activityService');
+const { photoUpload, savePhoto, removePhoto, photoIdFrom } = require('../../services/photoService');
 
-const UPLOAD_DIR = path.join(__dirname, '..', '..', '..', 'public', 'uploads');
 const TEMPLATE = path.join(__dirname, '..', '..', '..', 'public', 'sample-data', 'family-template.csv');
 
-const photoUpload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOAD_DIR,
-    filename: (req, file, cb) => cb(null, crypto.randomUUID() + path.extname(file.originalname).toLowerCase()),
-  }),
-  limits: { fileSize: 3 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const ok = ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype);
-    cb(ok ? null : new HttpError(415, 'Only JPG, PNG or WEBP photos are allowed'), ok);
-  },
-});
 const dataUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 512 * 1024 } });
 
 const router = express.Router();
@@ -42,11 +29,12 @@ const memberRules = [
 ];
 
 // Only our own image paths are allowed (the page's security policy blocks outside images anyway)
-const safePhoto = (url) => (typeof url === 'string' && /^\/(uploads|seed-avatars)\/[\w.-]+\.(png|jpe?g|webp|svg)$/i.test(url) ? url : '');
+const safePhoto = (url) => {
+  if (typeof url !== 'string') return '';
+  if (/^\/seed-avatars\/[\w.-]+\.(png|jpe?g|webp|svg)$/i.test(url)) return url;
+  return photoIdFrom(url) ? url : '';
+};
 
-function removePhoto(url) {
-  if (url && url.startsWith('/uploads/')) fs.unlink(path.join(UPLOAD_DIR, path.basename(url)), () => {});
-}
 
 function pick(b) {
   const out = {};
@@ -70,13 +58,14 @@ router.get('/:patientId', requirePatientAccess(), async (req, res) => {
 
 // CREATE
 router.post('/:patientId', requirePatientAccess(), requireRole('caregiver', 'admin'), photoUpload.single('photo'), memberRules, validate, async (req, res) => {
+  const photoUrl = req.file ? await savePhoto(req.file, req.patientId, req.user.id) : '';
   const member = await FamilyMember.create({
     ...pick(req.body),
     patientId: req.patientId,
-    photoUrl: req.file ? `/uploads/${req.file.filename}` : '',
+    photoUrl,
     createdBy: req.user.id,
-  }).catch((e) => {
-    if (req.file) removePhoto(`/uploads/${req.file.filename}`);
+  }).catch(async (e) => {
+    await removePhoto(photoUrl);
     if (e.code === 11000) throw new HttpError(409, `${req.body.name} is already in the family list`);
     throw e;
   });
@@ -89,8 +78,8 @@ router.put('/:patientId/:id', requirePatientAccess(), requireRole('caregiver', '
   if (!member) throw new HttpError(404, 'Family member not found');
   Object.assign(member, pick(req.body));
   if (req.file) {
-    removePhoto(member.photoUrl);
-    member.photoUrl = `/uploads/${req.file.filename}`;
+    await removePhoto(member.photoUrl);
+    member.photoUrl = await savePhoto(req.file, req.patientId, req.user.id);
   }
   await member.save();
   res.json({ member });
@@ -100,7 +89,7 @@ router.put('/:patientId/:id', requirePatientAccess(), requireRole('caregiver', '
 router.delete('/:patientId/:id', requirePatientAccess(), requireRole('caregiver', 'admin'), param('id').isMongoId(), validate, async (req, res) => {
   const member = await FamilyMember.findOneAndDelete({ _id: req.params.id, patientId: req.patientId });
   if (!member) throw new HttpError(404, 'Family member not found');
-  removePhoto(member.photoUrl);
+  await removePhoto(member.photoUrl);
   res.status(204).end();
 });
 

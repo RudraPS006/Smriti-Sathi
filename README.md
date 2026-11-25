@@ -103,11 +103,17 @@ tests/                 unit (Jest) + API (Supertest, node --test)
 docs/                  syllabus mapping, Mongo + SQL command sheets, Postman
 ```
 
-## Deploy
-1. Push to GitHub. The CI workflow runs the tests.
-2. Create a free MongoDB Atlas cluster and copy its connection string.
-3. On Render choose **New → Blueprint**, pick the repo, and Render reads [render.yaml](render.yaml). Paste `MONGO_URI` (and optionally `OPENAI_API_KEY`).
-4. After the first deploy, open the Render shell and run `npm run seed` if you want demo data.
+## Deploy (Render + MongoDB Atlas, free)
+1. **MongoDB Atlas** — create a free M0 cluster, a database user, and under *Network Access* allow `0.0.0.0/0` (Render's addresses change). Copy the connection string and add the database name: `mongodb+srv://USER:PASS@cluster0.xxxxx.mongodb.net/smriti_sathi?retryWrites=true&w=majority`.
+2. **Render** — sign in with GitHub, choose **New → Blueprint**, pick this repository. [render.yaml](render.yaml) creates the app, the language microservice and a PostgreSQL database in Singapore. Paste the Atlas string when asked for `MONGO_URI` (leave `OPENAI_API_KEY` empty for mock mode) and click **Apply**.
+3. **Demo data (optional)** — on Render open *smriti-postgres → Connect* and copy the **External Database URL**. Create `.env.remote` in this folder (it is git-ignored):
+   ```
+   MONGO_URI=<Atlas connection string>
+   DATABASE_URL=<External Database URL>
+   ```
+   then run `npm run seed:remote -- --yes` (this replaces all data in those databases).
+
+Notes: free Render services sleep after ~15 minutes idle (the first visit then takes ~30–50 s). Uploaded photos and sessions are stored in MongoDB, so they survive restarts. Render's free PostgreSQL expires after 30 days unless upgraded.
 
 ## Notes and limits
 - The Assamese, Bengali and Hindi translations should be reviewed by a native speaker before real use.
