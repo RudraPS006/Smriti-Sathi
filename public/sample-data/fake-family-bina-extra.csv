@@ -1,0 +1,7 @@
+name,relation,phone,city,birthYear,isEmergencyContact,notes,photoUrl
+Bikash Saikia,brother-in-law,+91 00000 20001,Jorhat,1950,no,"Dipali's husband, tells funny stories",
+Jitu Bora,nephew,+91 00000 20002,Dibrugarh,1985,no,Brings tea from the family garden,
+Pori Kalita,neighbour,+91 00000 20003,Guwahati,1958,yes,Lives next door; has a spare key,
+Kanak Bora,grandson,,Pune,2010,no,"Moni's cousin, studies in Pune",
+,cousin,+91 00000 20004,Tezpur,1960,no,This row has no name so the importer will skip it,
+Moni Bora,granddaughter,,Guwahati,2012,no,Already in the list - the importer updates her instead of duplicating,

@@ -1,0 +1,60 @@
+{
+  "name": "smriti-sathi",
+  "version": "1.0.0",
+  "description": "AI-based cognitive gaming & memory assistance platform for elderly dementia patients in North East India (INT222 project)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "i18n-service": "node i18n-service/server.js",
+    "db:push": "prisma db push",
+    "db:generate": "prisma generate",
+    "seed": "node scripts/seed.js",
+    "test": "npm run test:unit && npm run test:api",
+    "logs:archive": "node scripts/archiveLogs.js",
+    "test:unit": "jest",
+    "test:api": "node tests/prepareTestDb.js && node --test --test-concurrency=1 --test-force-exit --test-timeout=20000 tests/integration/"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.5",
+    "express-session": "^1.19.0",
+    "express-validator": "^7.3.2",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.13.0",
+    "multer": "^2.5.0",
+    "openai": "^7.63.0",
+    "socket.io": "^4.8.4",
+    "ws": "^8.23.0"
+  },
+  "devDependencies": {
+    "expect": "^30.5.2",
+    "jest": "^30.5.2",
+    "nodemon": "^3.1.14",
+    "prisma": "^6.19.3",
+    "socket.io-client": "^4.8.4",
+    "supertest": "^7.3.2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 30000,
+    "roots": [
+      "<rootDir>/tests/unit"
+    ],
+    "setupFiles": [
+      "<rootDir>/tests/setupEnv.js"
+    ]
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

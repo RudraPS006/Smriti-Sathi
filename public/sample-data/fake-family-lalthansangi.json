@@ -1,0 +1,9 @@
+{
+  "family": [
+    { "name": "Mary Lalremruati", "relation": "daughter", "phone": "+91 00000 30001", "city": "Aizawl", "birthYear": 1975, "isEmergencyContact": true, "notes": "Lives with her; main caregiver", "photoUrl": "/seed-avatars/mary-lalremruati.svg" },
+    { "name": "Zothanpuia Ralte", "relation": "son", "phone": "+91 00000 30002", "city": "Shillong", "birthYear": 1978, "isEmergencyContact": false, "notes": "Phones every evening", "photoUrl": "/seed-avatars/zothanpuia-ralte.svg" },
+    { "name": "Lalnunmawii", "relation": "granddaughter", "city": "Aizawl", "birthYear": 2011, "notes": "Sings in the church choir with her", "photoUrl": "/seed-avatars/lalnunmawii.svg" },
+    { "name": "Vanlalruata Ralte", "relation": "husband", "city": "Aizawl", "birthYear": 1944, "notes": "Retired school teacher", "photoUrl": "/seed-avatars/vanlalruata-ralte.svg" },
+    { "name": "Esther Lalbiakzuali", "relation": "neighbour", "phone": "+91 00000 30005", "city": "Aizawl", "birthYear": 1952, "isEmergencyContact": true, "notes": "Walks with her to church on Sundays" }
+  ]
+}

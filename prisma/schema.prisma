@@ -1,0 +1,105 @@
+// Unit V — PostgreSQL modelling with Prisma ORM
+// PostgreSQL holds the RELATIONAL data: who is who, and which caregiver looks after which patient.
+// MongoDB (see src/models) holds the high-volume, flexible data: game sessions, memories,
+// family members, activity log, chat messages and journal entries.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  patient
+  caregiver
+  admin
+}
+
+enum AlertType {
+  sos
+  cognitive_decline
+  missed_reminder
+  inactivity
+}
+
+enum Severity {
+  low
+  medium
+  high
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(patient)
+  language     String   @default("en") // en | hi | as | bn
+  phone        String?
+  createdAt    DateTime @default(now())
+
+  patientProfile PatientProfile?
+  // links where this user is the patient
+  careTeam       CareLink[]      @relation("PatientLinks")
+  // links where this user is the caregiver
+  patients       CareLink[]      @relation("CarerLinks")
+  reminders      Reminder[]      @relation("PatientReminders")
+  alerts         Alert[]         @relation("PatientAlerts")
+}
+
+model PatientProfile {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  age           Int?
+  hometown      String?
+  state         String? // Assam, Meghalaya, Manipur, Mizoram, Nagaland, Tripura, Arunachal Pradesh, Sikkim
+  dementiaStage String   @default("mild") // mild | moderate | severe
+  notes         String?
+  // Short code the patient (or family) shares so a caregiver can connect, e.g. "K7M2QX"
+  careCode      String?  @unique
+}
+
+// Which caregiver looks after which patient (many-to-many between users)
+model CareLink {
+  id          Int      @id @default(autoincrement())
+  patientId   Int
+  carerId     Int
+  relation    String? // "son", "daughter", "nurse" ...
+  createdAt   DateTime @default(now())
+
+  patient User @relation("PatientLinks", fields: [patientId], references: [id], onDelete: Cascade)
+  carer   User @relation("CarerLinks", fields: [carerId], references: [id], onDelete: Cascade)
+
+  @@unique([patientId, carerId])
+}
+
+model Reminder {
+  id         Int       @id @default(autoincrement())
+  patientId  Int
+  title      String
+  time       String // "HH:MM" 24h, daily
+  kind       String    @default("medicine") // medicine | meal | water | activity
+  active     Boolean   @default(true)
+  lastDoneAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  patient User @relation("PatientReminders", fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model Alert {
+  id           Int       @id @default(autoincrement())
+  patientId    Int
+  type         AlertType
+  severity     Severity  @default(medium)
+  message      String
+  acknowledged Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+
+  patient User @relation("PatientAlerts", fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId, createdAt])
+}

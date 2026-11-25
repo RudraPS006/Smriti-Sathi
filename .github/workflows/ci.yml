@@ -1,0 +1,34 @@
+# Unit VI — runs the full test suite on every push / pull request
+name: CI
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: smriti
+          POSTGRES_PASSWORD: smriti
+          POSTGRES_DB: smriti_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U smriti" --health-interval 5s --health-timeout 5s --health-retries 10
+      mongo:
+        image: mongo:8
+        ports: ['27017:27017']
+    env:
+      TEST_DATABASE_URL: postgresql://smriti:smriti@localhost:5432/smriti_test
+      TEST_MONGO_URI: mongodb://localhost:27017/smriti_test
+      JWT_SECRET: ci-secret
+      SESSION_SECRET: ci-session
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm test
