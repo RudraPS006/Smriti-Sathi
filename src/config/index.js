@@ -18,7 +18,8 @@ const config = {
   i18nServiceUrl: withScheme(process.env.I18N_SERVICE_URL || 'http://localhost:4001'),
   i18nPort: Number(process.env.I18N_PORT) || 4001,
   openai: {
-    apiKey: process.env.OPENAI_API_KEY || '',
+    // empty, "none" or "mock" all mean: no key → AI features run in mock mode
+    apiKey: /^\s*(none|mock|-)?\s*$/i.test(process.env.OPENAI_API_KEY || '') ? '' : process.env.OPENAI_API_KEY.trim(),
     model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
     embedModel: process.env.OPENAI_EMBED_MODEL || 'text-embedding-3-small',
     sttModel: process.env.OPENAI_STT_MODEL || 'whisper-1',
