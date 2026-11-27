@@ -1,0 +1,27 @@
+meta {
+  name: 08 Add family member invalid (422)
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/family/{{patientId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "",
+    "relation": "",
+    "phone": "call me"
+  }
+}
+
+assert {
+  res.status: eq 422
+}

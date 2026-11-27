@@ -1,0 +1,25 @@
+meta {
+  name: 07 Activity report (7 days)
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/reports/{{patientId}}/activity?days=7&limit=5
+  body: none
+  auth: bearer
+}
+
+params:query {
+  days: 7
+  limit: 5
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.timeline.items: isArray
+}

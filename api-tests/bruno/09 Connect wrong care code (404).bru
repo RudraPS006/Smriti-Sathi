@@ -1,0 +1,26 @@
+meta {
+  name: 09 Connect wrong care code (404)
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/patients/connect
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "careCode": "ZZZZZZ",
+    "relation": "son"
+  }
+}
+
+assert {
+  res.status: eq 404
+}

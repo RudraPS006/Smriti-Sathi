@@ -1,0 +1,24 @@
+meta {
+  name: 06 My patients (JWT)
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/patients
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+script:post-response {
+  bru.setVar("patientId", res.body.patients[0].id);
+}
+
+assert {
+  res.status: eq 200
+  res.body.patients: isArray
+}

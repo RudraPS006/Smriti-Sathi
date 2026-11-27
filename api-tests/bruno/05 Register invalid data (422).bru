@@ -1,0 +1,25 @@
+meta {
+  name: 05 Register invalid data (422)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/auth/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "A",
+    "email": "not-an-email",
+    "password": "123",
+    "role": "admin"
+  }
+}
+
+assert {
+  res.status: eq 422
+  res.body.error.details: isArray
+}
